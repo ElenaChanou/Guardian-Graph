@@ -1,112 +1,75 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = new Hono();
-
-// In-memory order storage
+// In-memory storage for demo purposes
 interface Order {
   id: string;
-  productName: string;
-  quantity: number;
-  amount?: number;
+  customerId: string;
+  items: string[];
+  amount: number;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   createdAt: string;
-  processedAt?: string;
 }
 
 const orders = new Map<string, Order>();
 
-// Logging utility
-function logError(error: Error, context: any) {
-  const logDir = path.join(__dirname, '..', 'logs');
-  const logFile = path.join(logDir, 'error.log');
-  
-  const timestamp = new Date().toISOString();
-  const logEntry = `
-[${timestamp}] ERROR: ${error.message}
-Request Context: ${JSON.stringify(context, null, 2)}
-Stack Trace:
-${error.stack}
-${'='.repeat(80)}
-`;
-  
-  try {
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    fs.appendFileSync(logFile, logEntry);
-  } catch (e) {
-    console.error('Failed to write to log file:', e);
-  }
-}
+const app = new Hono();
 
-// Generate unique order ID
-function generateOrderId(): string {
-  return `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+// Middleware for logging
+app.use('*', async (c, next) => {
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  console.log(`${c.req.method} ${c.req.url} - ${ms}ms`);
+});
 
-// POST /orders - Create new order
+// POST /orders - Create a new order
 app.post('/orders', async (c) => {
   try {
     const body = await c.req.json();
-    const { productName, quantity, amount } = body;
+    const { customerId, items, amount } = body;
 
-    if (!productName || !quantity) {
-      return c.json({ error: 'Missing required fields: productName, quantity' }, 400);
+    // Basic validation (but missing amount validation - intentional bug!)
+    if (!customerId || !items || !Array.isArray(items)) {
+      return c.json({ error: 'Invalid request: customerId and items are required' }, 400);
     }
 
-    const orderId = generateOrderId();
+    const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const order: Order = {
       id: orderId,
-      productName,
-      quantity,
-      amount,
+      customerId,
+      items,
+      amount, // BUG: Not validating if amount is 0 or undefined
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
 
     orders.set(orderId, order);
 
-    console.log(`✅ Order created: ${orderId}`);
-    return c.json({ 
-      success: true, 
+    return c.json({
+      success: true,
       order,
-      message: 'Order created successfully'
     }, 201);
-
   } catch (error) {
-    const err = error as Error;
-    logError(err, { endpoint: 'POST /orders', body: await c.req.json() });
+    console.error('Error creating order:', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
 // GET /orders/:id - Get order by ID
 app.get('/orders/:id', (c) => {
-  try {
-    const orderId = c.req.param('id');
-    const order = orders.get(orderId);
+  const orderId = c.req.param('id');
+  const order = orders.get(orderId);
 
-    if (!order) {
-      return c.json({ error: 'Order not found' }, 404);
-    }
-
-    return c.json({ success: true, order });
-
-  } catch (error) {
-    const err = error as Error;
-    logError(err, { endpoint: 'GET /orders/:id', orderId: c.req.param('id') });
-    return c.json({ error: 'Internal server error' }, 500);
+  if (!order) {
+    return c.json({ error: 'Order not found' }, 404);
   }
+
+  return c.json({ order });
 });
 
-// POST /orders/:id/process - Process payment (INTENTIONAL BUG HERE)
+// POST /orders/:id/process - Process payment for an order
 app.post('/orders/:id/process', async (c) => {
   const orderId = c.req.param('id');
   const order = orders.get(orderId);
@@ -116,90 +79,75 @@ app.post('/orders/:id/process', async (c) => {
   }
 
   if (order.status !== 'pending') {
-    return c.json({ error: `Order already ${order.status}` }, 400);
+    return c.json({ error: 'Order already processed' }, 400);
   }
 
   try {
-    // INTENTIONAL BUG: No validation for amount being 0 or undefined
-    // This will cause a crash when trying to calculate fees
-    order.status = 'processing';
+    // BUG: This will crash if amount is 0 or undefined!
+    // Simulating payment processing logic that fails with invalid amounts
+    const processingFee = order.amount * 0.03; // 3% processing fee
+    const taxRate = 0.1; // 10% tax
+    const tax = order.amount * taxRate;
     
-    // Calculate processing fee (10% of amount)
-    // BUG: If amount is 0 or undefined, this will cause issues
-    const processingFee = order.amount! * 0.1;
-    const totalAmount = order.amount! + processingFee;
+    // This calculation will cause issues with 0 or undefined
+    const total = order.amount + processingFee + tax;
     
-    // Simulate payment processing
-    // BUG: Division by zero or undefined will crash the server
-    const feePercentage = (processingFee / order.amount!) * 100;
+    // This division will crash with amount = 0
+    const discountEligibility = 1000 / order.amount; // BUG: Division by zero!
     
-    // This line will never be reached if amount is 0 or undefined
+    // Simulate payment gateway call
+    console.log(`Processing payment for order ${orderId}`);
+    console.log(`Amount: ${order.amount}, Fee: ${processingFee}, Tax: ${tax}, Total: ${total}`);
+    console.log(`Discount eligibility score: ${discountEligibility}`);
+
+    // Update order status
     order.status = 'completed';
-    order.processedAt = new Date().toISOString();
-    
-    console.log(`✅ Payment processed for order: ${orderId}`);
+    orders.set(orderId, order);
+
     return c.json({
       success: true,
       order,
       payment: {
         subtotal: order.amount,
         processingFee,
-        total: totalAmount,
-        feePercentage
-      }
+        tax,
+        total,
+      },
     });
-
   } catch (error) {
-    const err = error as Error;
-    
-    // Log the error
-    logError(err, {
-      endpoint: 'POST /orders/:id/process',
-      orderId,
-      order,
-      timestamp: new Date().toISOString()
-    });
-
-    // Mark order as failed
+    // This catch block won't help with the intentional bugs
+    console.error('Payment processing error:', error);
     order.status = 'failed';
-    
-    // Re-throw to crash the server (simulating production bug)
-    throw error;
+    orders.set(orderId, order);
+    return c.json({ error: 'Payment processing failed' }, 500);
   }
 });
 
 // Health check endpoint
 app.get('/health', (c) => {
-  return c.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    ordersCount: orders.size
-  });
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Root endpoint
 app.get('/', (c) => {
   return c.json({
-    message: 'Guardian-Graph Demo API',
+    message: 'Guardian-Graph Order Management API',
     version: '1.0.0',
     endpoints: {
-      'POST /orders': 'Create new order',
+      'POST /orders': 'Create a new order',
       'GET /orders/:id': 'Get order by ID',
-      'POST /orders/:id/process': 'Process payment for order',
-      'GET /health': 'Health check'
+      'POST /orders/:id/process': 'Process payment for an order',
+      'GET /health': 'Health check',
     },
-    note: '⚠️  This demo contains intentional bugs for testing Guardian-Graph'
   });
 });
 
 const port = 3000;
-console.log(`🚀 Guardian-Graph Demo API running on http://localhost:${port}`);
-console.log(`📝 Logs will be written to: ${path.join(__dirname, '..', 'logs', 'error.log')}`);
-console.log(`⚠️  WARNING: This server contains intentional bugs for demo purposes\n`);
+console.log(`🚀 Server is running on http://localhost:${port}`);
 
 serve({
   fetch: app.fetch,
-  port
+  port,
 });
 
 // Made with Bob
