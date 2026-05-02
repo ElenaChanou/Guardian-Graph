@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Postmortem Report - Guardian Graph</title>
+    
+    <!-- Mermaid.js for diagram rendering -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#0f62fe',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#0043ce',
+                lineColor: '#525252',
+                secondaryColor: '#d0e2ff',
+                tertiaryColor: '#f4f4f4'
+            }
+        });
+    </script>
+    
+    <style>
+        /* IBM Carbon Design System Colors */
+        :root {
+            --ibm-blue: #0f62fe;
+            --ibm-blue-dark: #0043ce;
+            --ibm-blue-light: #d0e2ff;
+            --gray-10: #f4f4f4;
+            --gray-20: #e0e0e0;
+            --gray-50: #8d8d8d;
+            --gray-70: #525252;
+            --gray-90: #262626;
+            --gray-100: #161616;
+            --white: #ffffff;
+            --red: #da1e28;
+            --orange: #ff832b;
+            --yellow: #f1c21b;
+            --green: #24a148;
+            --code-bg: #f4f4f4;
+            --code-border: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-100);
+            background-color: var(--gray-10);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--ibm-blue) 0%, var(--ibm-blue-dark) 100%);
+            color: var(--white);
+            padding: 3rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .header-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-meta-item strong {
+            font-weight: 600;
+        }
+
+        /* Severity Badge */
+        .severity-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .severity-critical {
+            background-color: var(--red);
+            color: var(--white);
+        }
+
+        .severity-high {
+            background-color: var(--orange);
+            color: var(--white);
+        }
+
+        .severity-medium {
+            background-color: var(--yellow);
+            color: var(--gray-100);
+        }
+
+        /* Section */
+        .section {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--ibm-blue);
+        }
+
+        .section-icon {
+            font-size: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--gray-100);
+        }
+
+        /* Executive Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .summary-card {
+            padding: 1.5rem;
+            background: var(--gray-10);
+            border-radius: 6px;
+            border-left: 4px solid var(--ibm-blue);
+        }
+
+        .summary-card-label {
+            font-size: 0.875rem;
+            color: var(--gray-70);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-100);
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--ibm-blue-light);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.375rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--ibm-blue);
+            border: 3px solid var(--white);
+            box-shadow: 0 0 0 2px var(--ibm-blue);
+        }
+
+        .timeline-time {
+            font-weight: 600;
+            color: var(--ibm-blue);
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-event {
+            color: var(--gray-90);
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-family: 'IBM Plex Mono', 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: var(--gray-100);
+        }
+
+        /* Diff Styling */
+        .diff-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .diff-before,
+        .diff-after {
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .diff-header {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .diff-before .diff-header {
+            background: #fff1f1;
+            color: var(--red);
+        }
+
+        .diff-after .diff-header {
+            background: #defbe6;
+            color: var(--green);
+        }
+
+        .diff-code {
+            background: var(--code-bg);
+            border: 1px solid var(--code-border);
+            padding: 1rem;
+            font-family: 'IBM Plex Mono', 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+
+        .diff-before .diff-code {
+            border-left: 4px solid var(--red);
+        }
+
+        .diff-after .diff-code {
+            border-left: 4px solid var(--green);
+        }
+
+        /* Git Commit */
+        .commit-card {
+            background: var(--gray-10);
+            border-radius: 6px;
+            padding: 1.5rem;
+            border-left: 4px solid var(--ibm-blue);
+        }
+
+        .commit-hash {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--ibm-blue);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .commit-author {
+            color: var(--gray-70);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .commit-message {
+            color: var(--gray-100);
+            font-weight: 500;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-20);
+        }
+
+        /* Mermaid Diagram */
+        .diagram-container {
+            background: var(--white);
+            border: 1px solid var(--gray-20);
+            border-radius: 6px;
+            padding: 2rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        /* Recommendations */
+        .recommendations-list {
+            list-style: none;
+        }
+
+        .recommendation-item {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: var(--gray-10);
+            border-radius: 6px;
+            border-left: 4px solid var(--ibm-blue);
+        }
+
+        .recommendation-item strong {
+            color: var(--ibm-blue);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray-70);
+            font-size: 0.875rem;
+        }
+
+        .footer-logo {
+            font-weight: 600;
+            color: var(--ibm-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .diff-container {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .section {
+                box-shadow: none;
+                border: 1px solid var(--gray-20);
+                page-break-inside: avoid;
+            }
+
+            .header {
+                background: var(--ibm-blue);
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🛡️ Incident Postmortem Report</h1>
+            <div class="header-meta">
+                <div class="header-meta-item">
+                    <strong>Incident ID:</strong>
+                    <span id="incident-id">INC-2026-05-02-001</span>
+                </div>
+                <div class="header-meta-item">
+                    <strong>Date:</strong>
+                    <span id="incident-date">May 2, 2026</span>
+                </div>
+                <div class="header-meta-item">
+                    <strong>Duration:</strong>
+                    <span id="incident-duration">4 days</span>
+                </div>
+                <div class="header-meta-item">
+                    <strong>Status:</strong>
+                    <span>Resolved</span>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem;">
+                <span class="severity-badge severity-critical" id="severity-badge">Critical</span>
+            </div>
+        </header>
+
+        <!-- Executive Summary -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">📋</span>
+                <h2 class="section-title">Executive Summary</h2>
+            </div>
+            <div id="executive-summary">
+                <p style="margin-bottom: 1.5rem;">
+                    A critical production incident occurred in the order processing system, resulting in multiple server crashes 
+                    when processing payments for orders with zero or undefined amounts. The issue affected 10+ transactions over 
+                    a 4-day period, causing service disruptions and impacting customer experience.
+                </p>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-card-label">Affected Systems</div>
+                        <div class="summary-card-value">Order Processing API</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Error Count</div>
+                        <div class="summary-card-value">10+ crashes</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">User Impact</div>
+                        <div class="summary-card-value">Multiple customers</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Detection Method</div>
+                        <div class="summary-card-value">Error logs</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Timeline -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">⏱️</span>
+                <h2 class="section-title">Timeline of Events</h2>
+            </div>
+            <div class="timeline" id="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-time">April 28, 2026 09:23 UTC</div>
+                    <div class="timeline-event">First error occurrence - TypeError on undefined amount</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">April 28, 2026 14:47 UTC</div>
+                    <div class="timeline-event">Division by zero error detected</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">April 29-May 1, 2026</div>
+                    <div class="timeline-event">Multiple crashes continue - 8 additional incidents</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">May 2, 2026 11:27 UTC</div>
+                    <div class="timeline-event">Last error occurrence before investigation</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">May 2, 2026 18:00 UTC</div>
+                    <div class="timeline-event">Guardian Graph analysis initiated</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">May 2, 2026 18:03 UTC</div>
+                    <div class="timeline-event">Root cause identified - Missing amount validation</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">May 2, 2026 18:05 UTC</div>
+                    <div class="timeline-event">Fix applied and deployed</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">May 2, 2026 18:30 UTC</div>
+                    <div class="timeline-event">Incident resolved - Monitoring confirmed stability</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Root Cause Analysis -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">🔍</span>
+                <h2 class="section-title">Root Cause Analysis</h2>
+            </div>
+            <div id="root-cause">
+                <h3 style="color: var(--gray-90); margin-bottom: 1rem;">Technical Explanation</h3>
+                <p style="margin-bottom: 1rem;">
+                    The root cause was identified in the <code>POST /orders/:id/process</code> endpoint in 
+                    <code>demo-app/src/orders.ts</code>. The payment processing logic performed arithmetic operations 
+                    and division on the <code>order.amount</code> field without validating that it was a positive number.
+                </p>
+                
+                <h3 style="color: var(--gray-90); margin: 1.5rem 0 1rem;">Problematic Code</h3>
+                <div class="code-block">
+                    <pre><code>// Line 88-96 in demo-app/src/orders.ts
+const processingFee = order.amount * 0.03; // Fails if amount is undefined
+const taxRate = 0.1;
+const tax = order.amount * taxRate; // Fails if amount is undefined
+
+const total = order.amount + processingFee + tax;
+
+// Division by zero when amount = 0
+const discountEligibility = 1000 / order.amount; // 💥 CRASH!</code></pre>
+                </div>
+
+                <h3 style="color: var(--gray-90); margin: 1.5rem 0 1rem;">Why It Failed</h3>
+                <ul style="margin-left: 1.5rem; color: var(--gray-90);">
+                    <li style="margin-bottom: 0.5rem;">The <code>POST /orders</code> endpoint did not validate the <code>amount</code> field</li>
+                    <li style="margin-bottom: 0.5rem;">Orders could be created with <code>amount: 0</code> or <code>amount: undefined</code></li>
+                    <li style="margin-bottom: 0.5rem;">Payment processing attempted division by zero: <code>1000 / 0</code></li>
+                    <li style="margin-bottom: 0.5rem;">Arithmetic operations on <code>undefined</code> resulted in <code>NaN</code> and crashes</li>
+                </ul>
+
+                <h3 style="color: var(--gray-90); margin: 1.5rem 0 1rem;">Trigger Conditions</h3>
+                <p style="color: var(--gray-90);">
+                    The error manifested when users created orders for free trials, promotional items, gift cards, 
+                    or when the amount field was accidentally omitted from the request payload.
+                </p>
+            </div>
+        </section>
+
+        <!-- Responsible Git Commit -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">📜</span>
+                <h2 class="section-title">Responsible Git Commit</h2>
+            </div>
+            <div id="git-commit">
+                <div class="commit-card">
+                    <div class="commit-hash">Commit: a3f7b2c9d1e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8</div>
+                    <div class="commit-author">
+                        <strong>Author:</strong> developer@example.com<br>
+                        <strong>Date:</strong> April 15, 2026 14:23 UTC
+                    </div>
+                    <div class="commit-message">
+                        <strong>Message:</strong> feat: Add payment processing endpoint
+                        <p style="margin-top: 0.5rem; color: var(--gray-70);">
+                            This commit introduced the payment processing logic but did not include validation 
+                            for the order amount field, leading to the division by zero error.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visual Dependency Map -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">🗺️</span>
+                <h2 class="section-title">Visual Dependency Map</h2>
+            </div>
+            <div class="diagram-container">
+                <pre class="mermaid">
+graph TD
+    A[🌐 POST /orders/:id/process] --> B[processPayment Function]
+    B --> C[💥 Line 96: Division by Zero]
+    B --> D[💥 Line 88: Arithmetic on undefined]
+    
+    E[🌐 POST /orders] --> F[createOrder Function]
+    F --> G[⚠️ Missing amount validation]
+    G --> C
+    G --> D
+    
+    H[Order Storage] --> B
+    F --> H
+    
+    style C fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px
+    style D fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px
+    style G fill:#ffd93d,stroke:#f59f00,stroke-width:2px
+    style A fill:#51cf66,stroke:#2f9e44
+    style E fill:#51cf66,stroke:#2f9e44
+    style B fill:#ffe66d,stroke:#f59f00
+    style F fill:#ffe66d,stroke:#f59f00
+                </pre>
+            </div>
+            <div style="margin-top: 1rem;">
+                <p><strong>Legend:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem; color: var(--gray-90);">
+                    <li>🔴 <strong>Red:</strong> Critical failure points (bug location)</li>
+                    <li>🟠 <strong>Orange:</strong> Direct impact (functions calling buggy code)</li>
+                    <li>🟡 <strong>Yellow:</strong> Indirect impact (upstream dependencies)</li>
+                    <li>🟢 <strong>Green:</strong> Entry points (user-facing endpoints)</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Fix Applied -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">🔧</span>
+                <h2 class="section-title">Fix Applied</h2>
+            </div>
+            <div id="fix-applied">
+                <h3 style="color: var(--gray-90); margin-bottom: 1rem;">Solution Description</h3>
+                <p style="margin-bottom: 1.5rem;">
+                    Added validation in the <code>POST /orders</code> endpoint to ensure the <code>amount</code> field 
+                    is present and greater than zero before creating an order. This prevents invalid orders from being 
+                    created and eliminates the division by zero error in payment processing.
+                </p>
+
+                <h3 style="color: var(--gray-90); margin-bottom: 1rem;">Code Changes</h3>
+                <div class="diff-container">
+                    <div class="diff-before">
+                        <div class="diff-header">❌ Before (Buggy Code)</div>
+                        <div class="diff-code"><pre><code>// Basic validation (but missing amount validation)
+if (!customerId || !items || !Array.isArray(items)) {
+  return c.json({ 
+    error: 'Invalid request: customerId and items are required' 
+  }, 400);
+}
+
+const order: Order = {
+  id: orderId,
+  customerId,
+  items,
+  amount, // BUG: Not validating if amount is 0 or undefined
+  status: 'pending',
+  createdAt: new Date().toISOString(),
+};</code></pre></div>
+                    </div>
+                    <div class="diff-after">
+                        <div class="diff-header">✅ After (Fixed Code)</div>
+                        <div class="diff-code"><pre><code>// Complete validation including amount
+if (!customerId || !items || !Array.isArray(items)) {
+  return c.json({ 
+    error: 'Invalid request: customerId and items are required' 
+  }, 400);
+}
+
+// NEW: Validate amount field
+if (!amount || amount <= 0) {
+  return c.json({ 
+    error: 'Invalid amount: must be greater than 0' 
+  }, 400);
+}
+
+const order: Order = {
+  id: orderId,
+  customerId,
+  items,
+  amount, // Now guaranteed to be valid
+  status: 'pending',
+  createdAt: new Date().toISOString(),
+};</code></pre></div>
+                    </div>
+                </div>
+
+                <h3 style="color: var(--gray-90); margin: 1.5rem 0 1rem;">Testing Performed</h3>
+                <ul style="margin-left: 1.5rem; color: var(--gray-90);">
+                    <li style="margin-bottom: 0.5rem;">✅ Tested order creation with amount = 0 (rejected with 400 error)</li>
+                    <li style="margin-bottom: 0.5rem;">✅ Tested order creation without amount field (rejected with 400 error)</li>
+                    <li style="margin-bottom: 0.5rem;">✅ Tested order creation with negative amount (rejected with 400 error)</li>
+                    <li style="margin-bottom: 0.5rem;">✅ Tested valid order creation and payment processing (successful)</li>
+                    <li style="margin-bottom: 0.5rem;">✅ Monitored production for 2 hours - no crashes detected</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Prevention Recommendations -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">🛡️</span>
+                <h2 class="section-title">Prevention Recommendations</h2>
+            </div>
+            <div id="recommendations">
+                <h3 style="color: var(--gray-90); margin-bottom: 1rem;">Immediate Actions (Must-Do)</h3>
+                <ul class="recommendations-list">
+                    <li class="recommendation-item">
+                        <strong>1. Add Input Validation Tests</strong>
+                        Create unit tests that verify all API endpoints reject invalid inputs (null, undefined, zero, negative values)
+                    </li>
+                    <li class="recommendation-item">
+                        <strong>2. Implement Request Schema Validation</strong>
+                        Use a validation library (Zod, Joi, Yup) to enforce request schemas at the API layer
+                    </li>
+                    <li class="recommendation-item">
+                        <strong>3. Add Error Monitoring Alerts</strong>
+                        Configure alerts for division by zero and undefined arithmetic errors in production
+                    </li>
+                </ul>
+
+                <h3 style="color: var(--gray-90); margin: 1.5rem 0 1rem;">Short-term Improvements</h3>
+                <ul class="recommendations-list">
+                    <li class="recommendation-item">
+                        <strong>1. Code Review Checklist</strong>
+                        Add "Input validation for all numeric fields" to the code review checklist
+                    </li>
+                    <li class="recommendation-item">
+                        <strong>2. Integration Tests</strong>
+                        Create end-to-end tests that cover the full order creation and payment flow with edge cases
+                    </li>
+                    <li class="recommendation-item">
+                        <strong>3. TypeScript Strict Mode</strong>
+                        Enable strict null checks in TypeScript to catch potential undefined/null issues at compile time
+                    </li>
+                </ul>
+
+                <h3 style="color: var(--gray-90); margin: 1.5rem 0 1rem;">Long-term Enhancements</h3>
+                <ul class="recommendations-list">
+                    <li class="recommendation-item">
+                        <strong>1. API Gateway Validation</strong>
+                        Implement request validation at the API gateway level before requests reach application code
+                    </li>
+                    <li class="recommendation-item">
+                        <strong>2. Automated Postmortem Generation</strong>
+                        Integrate Guardian Graph into the CI/CD pipeline for automatic incident analysis
+                    </li>
+                    <li class="recommendation-item">
+                        <strong>3. Chaos Engineering</strong>
+                        Implement chaos testing to proactively identify edge cases and failure scenarios
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-logo">🛡️ Guardian Graph</div>
+            <div>Incident Postmortem Report generated by Guardian Graph AI</div>
+            <div style="margin-top: 0.5rem;">Powered by IBM Bob AI • Built for IBM Bob Dev Day Hackathon 2026</div>
+        </footer>
+    </div>
+</body>
+</html>
