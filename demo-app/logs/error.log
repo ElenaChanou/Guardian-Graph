@@ -1,0 +1,143 @@
+[2026-04-28T09:23:15.442Z] ERROR: Unhandled exception in order processing
+TypeError: Cannot read properties of undefined (reading 'amount')
+    at /home/app/demo-app/src/orders.ts:88:35
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714295595442-x7k2m9p4q/process
+Order ID: ORD-1714295595442-x7k2m9p4q
+Customer ID: CUST-8821
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:88:35)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+
+[2026-04-28T14:47:32.891Z] ERROR: Server crash - Division by zero
+RangeError: Division by zero
+    at /home/app/demo-app/src/orders.ts:94:41
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714313252891-p3n8k1m2v/process
+Order ID: ORD-1714313252891-p3n8k1m2v
+Customer ID: CUST-4429
+Order Amount: 0
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:94:41)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+  at Server.emit (node:events:514:28)
+
+[2026-04-29T03:12:08.223Z] ERROR: Fatal error in payment processing
+TypeError: Cannot perform arithmetic on undefined
+    at /home/app/demo-app/src/orders.ts:88:35
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714358528223-q9m4n7k3p/process
+Order ID: ORD-1714358528223-q9m4n7k3p
+Customer ID: CUST-9912
+Order Amount: undefined
+Items: ["laptop", "mouse", "keyboard"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:88:35)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+
+[2026-04-29T11:34:56.778Z] ERROR: Unhandled exception in order processing
+RangeError: Division by zero
+    at /home/app/demo-app/src/orders.ts:94:41
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714388096778-k2p7m9n4q/process
+Order ID: ORD-1714388096778-k2p7m9n4q
+Customer ID: CUST-5567
+Order Amount: 0
+Items: ["subscription-monthly"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:94:41)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+  at Server.emit (node:events:514:28)
+  at parserOnIncoming (node:_http_server:1143:12)
+
+[2026-04-30T08:21:43.556Z] ERROR: Server crash - Division by zero
+RangeError: Division by zero
+    at /home/app/demo-app/src/orders.ts:94:41
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714462903556-m8k3p2n7q/process
+Order ID: ORD-1714462903556-m8k3p2n7q
+Customer ID: CUST-7734
+Order Amount: 0
+Items: ["free-trial"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:94:41)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+
+[2026-04-30T16:55:29.112Z] ERROR: Fatal error in payment processing
+TypeError: Cannot read properties of undefined (reading 'amount')
+    at /home/app/demo-app/src/orders.ts:88:35
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714493729112-n4k9m2p7q/process
+Order ID: ORD-1714493729112-n4k9m2p7q
+Customer ID: CUST-3398
+Order Amount: undefined
+Items: ["premium-plan"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:88:35)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+  at Server.emit (node:events:514:28)
+
+[2026-05-01T02:18:47.889Z] ERROR: Unhandled exception in order processing
+RangeError: Division by zero
+    at /home/app/demo-app/src/orders.ts:94:41
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714527527889-p7k4m9n2q/process
+Order ID: ORD-1714527527889-p7k4m9n2q
+Customer ID: CUST-6621
+Order Amount: 0
+Items: ["promotional-item"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:94:41)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+
+[2026-05-01T13:42:15.334Z] ERROR: Server crash - Division by zero
+RangeError: Division by zero
+    at /home/app/demo-app/src/orders.ts:94:41
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714568535334-k9m3p7n4q/process
+Order ID: ORD-1714568535334-k9m3p7n4q
+Customer ID: CUST-1145
+Order Amount: 0
+Items: ["coupon-redemption"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:94:41)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+  at Server.emit (node:events:514:28)
+  at parserOnIncoming (node:_http_server:1143:12)
+
+[2026-05-02T07:09:33.667Z] ERROR: Fatal error in payment processing
+TypeError: Cannot perform arithmetic on undefined
+    at /home/app/demo-app/src/orders.ts:88:35
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714631373667-m2k8p4n9q/process
+Order ID: ORD-1714631373667-m2k8p4n9q
+Customer ID: CUST-8873
+Order Amount: undefined
+Items: ["enterprise-license"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:88:35)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+
+[2026-05-02T11:27:51.223Z] ERROR: Unhandled exception in order processing
+RangeError: Division by zero
+    at /home/app/demo-app/src/orders.ts:94:41
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+Request: POST /orders/ORD-1714646871223-n7k2m8p3q/process
+Order ID: ORD-1714646871223-n7k2m8p3q
+Customer ID: CUST-4456
+Order Amount: 0
+Items: ["gift-card"]
+Stack trace:
+  at app.post (/home/app/demo-app/src/orders.ts:94:41)
+  at dispatch (/home/app/node_modules/hono/dist/index.js:234:28)
+  at /home/app/node_modules/hono/dist/index.js:189:12
+  at Server.emit (node:events:514:28)
