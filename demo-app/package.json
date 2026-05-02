@@ -1,0 +1,29 @@
+{
+  "name": "guardian-graph-demo",
+  "version": "1.0.0",
+  "description": "Demo application for Guardian-Graph hackathon - Order management API with intentional bugs",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/orders.ts",
+    "start": "tsx src/orders.ts",
+    "test:bug": "curl -X POST http://localhost:3000/orders -H 'Content-Type: application/json' -d '{\"productName\":\"Test Product\",\"quantity\":1}'",
+    "test:valid": "curl -X POST http://localhost:3000/orders -H 'Content-Type: application/json' -d '{\"productName\":\"Valid Product\",\"quantity\":2,\"amount\":99.99}'"
+  },
+  "keywords": [
+    "hackathon",
+    "demo",
+    "hono",
+    "order-management"
+  ],
+  "author": "IBM Bob Dev Day Hackathon 2026",
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.0.0",
+    "@hono/node-server": "^1.8.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.11.0"
+  }
+}
